@@ -6,63 +6,48 @@ colorTo: blue
 sdk: docker
 app_port: 7860
 ---
-# [Demo on Hugging Face](https://huggingface.co/spaces/willthesun/SecretAgent)
 
-# Secret Agents
+# 🔗 Demo: **[Open on Hugging Face →](https://huggingface.co/spaces/willthesun/SecretAgent)**
 
-A web-based spy mission text game demonstrating **multi-agent orchestration** and **LLM tool-calling** with [Chainlit](https://chainlit.io).
+# Secret Agents (Agentic LLM Game)
 
-A Taskmaster agent manages mission state and drives the narrative, dynamically invoking tools mid-conversation — real-time weather lookups and Caesar cipher decryption — before formulating its next response. A second general-purpose agent handles out-of-mission dialogue. Game state is maintained per-user in session memory, making the app stateless and container-ready.
+Secret Agents is a web-based spy mission text game built with **Chainlit** and an **LLM tool-calling runtime**. The core learning outcome is **engineering an agentic system**: routing between agents, running a **tool loop** (LLM → tools → LLM), and enforcing a **finite-state mission workflow** while the model generates narrative and decisions.
 
-## Agentic Patterns Demonstrated
+## Agentic Concepts Demonstrated
 
-| Pattern | Implementation |
-| --- | --- |
-| **Tool-calling / function-calling** | Taskmaster invokes `weather` and `decrypt_message` tools mid-loop via OpenAI function calling |
-| **Agentic tool loop** | App reruns the LLM after each tool result until no further tool calls are made |
-| **Multi-agent routing** | Active missions route to the Taskmaster; idle sessions route to a general LLM interface |
-| **Session-scoped state** | Mission state tracked in `cl.user_session` — no file I/O, safe for multi-user deployments |
+### 1) Tool Calling (Structured Actions)
+The model can emit structured tool calls (name + JSON parameters). The app executes tools (e.g., weather lookup, cipher decrypt) and returns tool results back to the model as tool messages.
+
+### 2) Agentic Tool Loop (LLM ↔ Tools Until Done)
+Instead of a single response, the system repeatedly alternates **LLM → tool execution → LLM** until the model stops requesting tools, enabling multi-step behavior with environment feedback.
+
+### 3) Multi-Agent Routing (Specialist vs Generalist)
+Requests are routed between a constrained mission manager (specialist) and a general conversational agent (generalist), keeping prompts simpler and behavior more controllable.
+
+### 4) Controlled Workflow (Prompt-as-Policy + FSM)
+Prompts encode “policy” (required steps, phase-specific rules), while a finite sequence of phases structures mission progression. Creativity stays in the model; correctness stays in the workflow constraints.
+
+### 5) Context + Hybrid Software Design (Reliability)
+The app carefully selects what context to feed the model (summaries over dumps) and combines deterministic code (validation/updates) with probabilistic generation (narrative), improving reliability and debuggability.
+
+---
 
 ## Gameplay
 
 Players receive a covert mission briefing and work through four phases:
 
-| Phase | Objective |
-| --- | --- |
-| **Travel** | Receive your destination from the Taskmaster |
-| **Disguise** | Check local weather and choose your cover |
+| Phase              | Objective                                                       |
+| ------------------ | --------------------------------------------------------------- |
+| **Travel**         | Receive your destination from the Taskmaster                    |
+| **Disguise**       | Check local weather and choose your cover                       |
 | **Crack the Code** | Decrypt an intercepted Caesar cipher using the Decryptor gadget |
-| **Complete** | Debrief with the Taskmaster to close the mission |
+| **Complete**       | Debrief with the Taskmaster to close the mission                |
 
-## Architecture
-
-```
-User message
-    │
-    ▼
-Agent Router (app.py)
-    ├── Mission active?  ──► Taskmaster Agent
-    │                            │
-    │                     Tool-calling loop
-    │                       ├── weather(city)
-    │                       ├── decrypt_message(ciphertext, shift)
-    │                       └── update_game_phase(phase)
-    │
-    └── No mission  ──► LLM Interface Agent
-```
-
-**Agents:**
-- **Taskmaster** — drives mission phases, calls tools, manages game state transitions
-- **LLM Interface** — handles general conversation with a system prompt and full message history
-
-**Tool gadgets:**
-- **Weather** — live conditions via OpenWeather API, used to inform the player's disguise choice
-- **Decryptor** — solves Caesar ciphers; the player must guess the correct shift key
+---
 
 ## Running Locally
 
 ### Prerequisites
-
 - Python 3.11+
 - OpenAI API key
 - OpenWeather API key
@@ -91,7 +76,7 @@ chainlit run app.py
 
 ## Environment Variables
 
-| Variable | Description |
-| --- | --- |
-| `OPENAI_API_KEY` | OpenAI API key for LLM calls |
+| Variable              | Description                                |
+| --------------------- | ------------------------------------------ |
+| `OPENAI_API_KEY`      | OpenAI API key for LLM calls               |
 | `OPENWEATHER_API_KEY` | OpenWeather API key for the Weather gadget |
