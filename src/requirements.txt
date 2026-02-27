@@ -1,0 +1,4 @@
+chainlit
+requests
+openai
+python-dotenv
