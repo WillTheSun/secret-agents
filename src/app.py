@@ -86,7 +86,7 @@ async def on_new_game(action: cl.Action):
     elif phase == "crack_code":
         actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
 
-    await cl.Message(content=f"**[PHASE: {phase}]**\n\n{briefing}", actions=actions).send()
+    await cl.Message(content=briefing, actions=actions).send()
 
 
 @cl.action_callback("get_weather")
@@ -107,6 +107,8 @@ async def on_use_decryptor(action: cl.Action):
     ).send()
 
     if not res:
+        retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
+        await cl.Message(content="⏱️ **Decryptor timed out.** Try again.", actions=[retry_action]).send()
         return
 
     value = res.get("value") or res.get("name", "").rsplit("_", 1)[-1]
@@ -129,7 +131,7 @@ async def on_use_decryptor(action: cl.Action):
         set_game_state(game_state)
         cl.user_session.set("messages", messages)
 
-        await cl.Message(content=f"**[PHASE: complete]**\n\n{debrief}").send()
+        await cl.Message(content=debrief).send()
     else:
         retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
         await cl.Message(
@@ -163,4 +165,4 @@ async def handle_message(message: cl.Message):
     elif phase == "crack_code":
         actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
 
-    await cl.Message(content=f"**[PHASE: {phase}]**\n\n{result}", actions=actions).send()
+    await cl.Message(content=result, actions=actions).send()

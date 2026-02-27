@@ -104,6 +104,11 @@ def generate_mission():
     )
     data = json.loads(response.choices[0].message.content)
     for option in data.get("options", []):
+        # Ensure shift is within the valid 1-5 range
+        original_shift = option.get("shift", 1)
+        clamped_shift = max(1, min(5, int(original_shift)))
+        option["shift"] = clamped_shift
+        
         plaintext = option.pop("plaintext", "")
         option["cipher"] = encrypt_message(plaintext, option["shift"])
     return data
