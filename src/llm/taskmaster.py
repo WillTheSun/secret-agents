@@ -20,15 +20,17 @@ CRITICAL:
 PHASE_PROMPTS = {
     "travel": """CURRENT PHASE: travel
 Present the 3 mission options listed in 'Mission Options' as distinct destinations.
+Number the options 1-3 in display order.
 For each option, show the location and a short <15 word summary of the atmospheric description — do NOT reveal the cipher or shift value.
 The agent MUST choose one.
+Treat a choice by number (1-3) as selecting the corresponding option in the displayed order.
 Once they choose, you MUST:
 1. Call select_mission with the chosen location, cipher, and shift.
 2. Call update_game_phase with phase='briefing'.""",
 
     "briefing": """CURRENT PHASE: briefing
 Set the scene in the chosen city.
-Using the shift_hint as inspiration, craft a single sentence and bury it naturally in the briefing narrative — an offhand remark, a piece of field intelligence, or an atmospheric detail. RULES for this sentence: (1) NEVER label it or draw attention to it. (2) NEVER state the shift as a digit. (3) It MUST contain exactly one countable element whose count equals the shift value — e.g. objects, events, taps on a door. The agent must recognise it themselves.
+Using the shift_hint as inspiration, craft a single sentence and bury it naturally in the briefing narrative — an offhand remark, a piece of field intelligence, or an atmospheric detail. RULES for this sentence: (1) NEVER label it or draw attention to it. (2) MUST include the shift as an explicit single digit (1-5) exactly once. (3) It MUST contain exactly one countable element whose count equals the shift value — e.g. objects, events, taps on a door. The agent must recognise it themselves.
 Present the encrypted cipher as the intercepted message they will need to crack.
 Present 3 plausible disguises suited to the mission, numbered 1–3.
 The agent MUST choose one cover identity.

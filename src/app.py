@@ -3,6 +3,7 @@ load_dotenv(find_dotenv(), override=True)
 
 import asyncio
 import json
+import time
 import chainlit as cl
 from llm.llm_interface import send_to_llm, SYSTEM_PROMPT
 from llm.taskmaster import generate_mission, send_to_taskmaster
@@ -33,6 +34,33 @@ def parse_selected_shift(action_result):
         return None
 
     return int(normalized)
+
+
+def make_use_decryptor_action():
+    return cl.Action(
+        name="use_decryptor",
+        value=f"use_decryptor_{time.time_ns()}",
+        label="🔓 Use Decryptor Gadget",
+        payload={},
+    )
+
+
+def make_choice_actions():
+    return [
+        cl.Action(name="choose_option", value=str(i), label=str(i), payload={})
+        for i in range(1, 4)
+    ]
+
+
+def build_phase_actions(phase):
+    actions = []
+    if phase in {"travel", "briefing"}:
+        actions.extend(make_choice_actions())
+    if phase == "briefing":
+        actions.append(cl.Action(name="get_weather", value="get_weather", label="🌦️ Get Weather Intel", payload={}))
+    elif phase == "crack_code":
+        actions.append(make_use_decryptor_action())
+    return actions
 
 
 async def run_tool_loop(send_fn, messages, **send_kwargs):
@@ -96,13 +124,7 @@ async def on_new_game(action: cl.Action):
 
     phase = game_state.get("current_mission", {}).get("phase", "unknown")
 
-    actions = []
-    if phase == "briefing":
-        actions.append(cl.Action(name="get_weather", value="get_weather", label="🌦️ Get Weather Intel", payload={}))
-    elif phase == "crack_code":
-        actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
-
-    await cl.Message(content=briefing, actions=actions).send()
+    await cl.Message(content=briefing, actions=build_phase_actions(phase)).send()
 
 
 @cl.action_callback("get_weather")
@@ -123,13 +145,13 @@ async def on_use_decryptor(action: cl.Action):
     ).send()
 
     if not res:
-        retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
+        retry_action = make_use_decryptor_action()
         await cl.Message(content="⏱️ **Decryptor timed out.** Try again.", actions=[retry_action]).send()
         return
 
     user_shift = parse_selected_shift(res)
     if user_shift is None:
-        retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
+        retry_action = make_use_decryptor_action()
         await cl.Message(
             content="⚠️ **Decryptor signal lost.** Please choose a valid shift and try again.",
             actions=[retry_action],
@@ -156,19 +178,18 @@ async def on_use_decryptor(action: cl.Action):
 
         await cl.Message(content=debrief).send()
     else:
-        retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
+        _, game_state = execute_tool("update_game_phase", {"phase": "complete"}, game_state)
+        set_game_state(game_state)
         await cl.Message(
-            content="❌ **DECRYPTION FAILED:** Incorrect shift. The signal remains scrambled. Try again.",
-            actions=[retry_action],
+            content="💀 **GAME OVER:** Mission failed. Incorrect decryptor key compromised the operation.",
         ).send()
 
 
-@cl.on_message
-async def handle_message(message: cl.Message):
+async def process_user_input(user_content: str):
     game_state = get_game_state()
     mission = game_state.get("current_mission", {})
     messages = cl.user_session.get("messages", [])
-    messages.append({"role": "user", "content": message.content})
+    messages.append({"role": "user", "content": user_content})
 
     if mission.get("active"):
         result, game_state = await run_tool_loop(send_to_taskmaster, messages, game_state=game_state)
@@ -182,10 +203,42 @@ async def handle_message(message: cl.Message):
 
     phase = game_state.get("current_mission", {}).get("phase", "none") if game_state.get("current_mission", {}).get("active") else "inactive"
 
-    actions = []
-    if phase == "briefing":
-        actions.append(cl.Action(name="get_weather", value="get_weather", label="🌦️ Get Weather Intel", payload={}))
-    elif phase == "crack_code":
-        actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
+    await cl.Message(content=result, actions=build_phase_actions(phase)).send()
 
-    await cl.Message(content=result, actions=actions).send()
+
+@cl.action_callback("choose_option")
+async def on_choose_option(action: cl.Action):
+    if isinstance(action, dict):
+        selection = (
+            action.get("value")
+            or action.get("label")
+            or action.get("payload", {}).get("value")
+            or action.get("name", "").rsplit("_", 1)[-1]
+        )
+    else:
+        selection = (
+            getattr(action, "value", None)
+            or getattr(action, "label", None)
+            or getattr(getattr(action, "payload", {}), "get", lambda *_: None)("value")
+            or getattr(action, "name", "").rsplit("_", 1)[-1]
+        )
+    normalized = str(selection).strip()
+    game_state = get_game_state()
+    phase = game_state.get("current_mission", {}).get("phase")
+
+    if normalized in {"1", "2", "3"} and phase == "travel":
+        await process_user_input(f"I choose mission option {normalized}.")
+        return
+
+    if normalized in {"1", "2", "3"} and phase == "briefing":
+        _, game_state = execute_tool("update_game_phase", {"phase": "crack_code"}, game_state)
+        set_game_state(game_state)
+        await process_user_input(f"I choose disguise option {normalized}. Proceed to crack code.")
+        return
+
+    await process_user_input(normalized)
+
+
+@cl.on_message
+async def handle_message(message: cl.Message):
+    await process_user_input(message.content)
