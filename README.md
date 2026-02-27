@@ -9,7 +9,18 @@ app_port: 7860
 
 # Secret Agents
 
-A web-based spy mission text game powered by a multi-agent LLM system, built with [Chainlit](https://chainlit.io).
+A web-based spy mission text game demonstrating **multi-agent orchestration** and **LLM tool-calling** with [Chainlit](https://chainlit.io).
+
+A Taskmaster agent manages mission state and drives the narrative, dynamically invoking tools mid-conversation — real-time weather lookups and Caesar cipher decryption — before formulating its next response. A second general-purpose agent handles out-of-mission dialogue. Game state is maintained per-user in session memory, making the app stateless and container-ready.
+
+## Agentic Patterns Demonstrated
+
+| Pattern | Implementation |
+| --- | --- |
+| **Tool-calling / function-calling** | Taskmaster invokes `weather` and `decrypt_message` tools mid-loop via OpenAI function calling |
+| **Agentic tool loop** | App reruns the LLM after each tool result until no further tool calls are made |
+| **Multi-agent routing** | Active missions route to the Taskmaster; idle sessions route to a general LLM interface |
+| **Session-scoped state** | Mission state tracked in `cl.user_session` — no file I/O, safe for multi-user deployments |
 
 ## Gameplay
 
@@ -24,14 +35,28 @@ Players receive a covert mission briefing and work through four phases:
 
 ## Architecture
 
-Two LLM agents collaborate to run the game:
+```
+User message
+    │
+    ▼
+Agent Router (app.py)
+    ├── Mission active?  ──► Taskmaster Agent
+    │                            │
+    │                     Tool-calling loop
+    │                       ├── weather(city)
+    │                       ├── decrypt_message(ciphertext, shift)
+    │                       └── update_game_phase(phase)
+    │
+    └── No mission  ──► LLM Interface Agent
+```
 
-- **Taskmaster** — manages game state and drives the mission narrative
-- **LLM Interface** — handles general conversation outside of active missions
+**Agents:**
+- **Taskmaster** — drives mission phases, calls tools, manages game state transitions
+- **LLM Interface** — handles general conversation with a system prompt and full message history
 
-Tool gadgets available to the agents:
-- **Weather** — real-time weather data via OpenWeather API
-- **Decryptor** — Caesar cipher solver
+**Tool gadgets:**
+- **Weather** — live conditions via OpenWeather API, used to inform the player's disguise choice
+- **Decryptor** — solves Caesar ciphers; the player must guess the correct shift key
 
 ## Running Locally
 
