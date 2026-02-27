@@ -6,6 +6,7 @@ colorTo: blue
 sdk: docker
 app_port: 7860
 ---
+# [Demo on Hugging Face](https://huggingface.co/spaces/willthesun/SecretAgent)
 
 # Secret Agents
 
