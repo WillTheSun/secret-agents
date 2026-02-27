@@ -19,6 +19,22 @@ def set_game_state(state):
     cl.user_session.set("game_state", state)
 
 
+def parse_selected_shift(action_result):
+    value = (
+        action_result.get("value")
+        or action_result.get("name", "").rsplit("_", 1)[-1]
+        or action_result.get("label")
+    )
+    if value is None:
+        return None
+
+    normalized = str(value).strip()
+    if normalized not in {"1", "2", "3", "4", "5"}:
+        return None
+
+    return int(normalized)
+
+
 async def run_tool_loop(send_fn, messages, **send_kwargs):
     """Run the tool-calling loop for any LLM sender and return (final_text, game_state)."""
     result = await asyncio.to_thread(send_fn, messages, **send_kwargs)
@@ -82,7 +98,7 @@ async def on_new_game(action: cl.Action):
 
     actions = []
     if phase == "briefing":
-        actions.append(cl.Action(name="get_weather", value="get_weather", label="Get Weather", payload={}))
+        actions.append(cl.Action(name="get_weather", value="get_weather", label="🌦️ Get Weather Intel", payload={}))
     elif phase == "crack_code":
         actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
 
@@ -111,8 +127,15 @@ async def on_use_decryptor(action: cl.Action):
         await cl.Message(content="⏱️ **Decryptor timed out.** Try again.", actions=[retry_action]).send()
         return
 
-    value = res.get("value") or res.get("name", "").rsplit("_", 1)[-1]
-    user_shift = int(value)
+    user_shift = parse_selected_shift(res)
+    if user_shift is None:
+        retry_action = cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={})
+        await cl.Message(
+            content="⚠️ **Decryptor signal lost.** Please choose a valid shift and try again.",
+            actions=[retry_action],
+        ).send()
+        return
+
     game_state = get_game_state()
     mission = game_state.get("current_mission", {})
     cipher = mission.get("cipher")
@@ -161,7 +184,7 @@ async def handle_message(message: cl.Message):
 
     actions = []
     if phase == "briefing":
-        actions.append(cl.Action(name="get_weather", value="get_weather", label="Get Weather", payload={}))
+        actions.append(cl.Action(name="get_weather", value="get_weather", label="🌦️ Get Weather Intel", payload={}))
     elif phase == "crack_code":
         actions.append(cl.Action(name="use_decryptor", value="use_decryptor", label="🔓 Use Decryptor Gadget", payload={}))
 

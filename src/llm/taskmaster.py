@@ -30,9 +30,9 @@ Once they choose, you MUST:
 Set the scene in the chosen city.
 Using the shift_hint as inspiration, craft a single sentence and bury it naturally in the briefing narrative — an offhand remark, a piece of field intelligence, or an atmospheric detail. RULES for this sentence: (1) NEVER label it or draw attention to it. (2) NEVER state the shift as a digit. (3) It MUST contain exactly one countable element whose count equals the shift value — e.g. objects, events, taps on a door. The agent must recognise it themselves.
 Present the encrypted cipher as the intercepted message they will need to crack.
-Present 3 plausible disguises suited to the mission.
+Present 3 plausible disguises suited to the mission, numbered 1–3.
 The agent MUST choose one cover identity.
-Once chosen, you MUST call update_game_phase with phase='crack_code'.""",
+CRITICAL — when the agent names or picks any disguise (by number or description), you MUST immediately call update_game_phase with phase='crack_code' AS A TOOL CALL before writing any response text. Do NOT acknowledge the choice with text only. If you are unsure whether the agent has chosen, ask them to confirm. Never move on without calling the tool.""",
 
     "crack_code": """CURRENT PHASE: crack_code
 Deliver the mission-critical encrypted message (the cipher from the mission state) themed to the selected city and disguise.
