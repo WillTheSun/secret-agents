@@ -6,10 +6,7 @@ colorTo: blue
 sdk: docker
 app_port: 7860
 ---
-
-# 🔗 Demo: **[Open on Hugging Face →](https://huggingface.co/spaces/willthesun/SecretAgent)**
-
-# Secret Agents (Agentic LLM Game)
+# Agent Workflow (Agentic LLM Game)
 
 Secret Agents is a web-based spy mission text game built with **Chainlit** and an **LLM tool-calling runtime**. The core learning outcome is **engineering an agentic system**: routing between agents, running a **tool loop** (LLM → tools → LLM), and enforcing a **finite-state mission workflow** while the model generates narrative and decisions.
 
@@ -31,6 +28,7 @@ Prompts encode “policy” (required steps, phase-specific rules), while a fini
 The app carefully selects what context to feed the model (summaries over dumps) and combines deterministic code (validation/updates) with probabilistic generation (narrative), improving reliability and debuggability.
 
 ---
+### 🔗 Demo: **[Open on Hugging Face →](https://huggingface.co/spaces/willthesun/SecretAgent)**
 
 ## Gameplay
 
